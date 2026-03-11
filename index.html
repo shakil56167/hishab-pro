@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="bn" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hishab Pro | Smart Expense Tracker</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#eef7ff",
+              100: "#d9eeff",
+              200: "#bce0ff",
+              300: "#8dccff",
+              400: "#55afff",
+              500: "#2d91ff",
+              600: "#1872f5",
+              700: "#145de1",
+              800: "#184db6",
+              900: "#1a448f"
+            }
+          },
+          boxShadow: {
+            glass: "0 8px 32px rgba(31,38,135,0.18)"
+          }
+        }
+      }
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.58);
+      --glass-border: rgba(255, 255, 255, 0.25);
+      --body-bg-1: #dbeafe;
+      --body-bg-2: #f5d0fe;
+      --body-bg-3: #fde68a;
+      --text-main: #0f172a;
+      --text-soft: #475569;
+      --card-bg: rgba(255, 255, 255, 0.55);
+      --input-bg: rgba(255, 255, 255, 0.76);
+    }
+
+    .dark {
+      --glass-bg: rgba(15, 23, 42, 0.62);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --body-bg-1: #0f172a;
+      --body-bg-2: #111827;
+      --body-bg-3: #1e293b;
+      --text-main: #e5eefc;
+      --text-soft: #94a3b8;
+      --card-bg: rgba(15, 23, 42, 0.62);
+      --input-bg: rgba(15, 23, 42, 0.78);
+    }
+
+    * {
+      font-family: "Hind Siliguri", sans-serif;
+    }
+
+    body {
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(96,165,250,0.35), transparent 35%),
+        radial-gradient(circle at 100% 0%, rgba(236,72,153,0.22), transparent 30%),
+        radial-gradient(circle at 100% 100%, rgba(251,191,36,0.18), transparent 25%),
+        linear-gradient(135deg, var(--body-bg-1), var(--body-bg-2), var(--body-bg-3));
+      min-height: 100vh;
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-glass, 0 8px 32px rgba(31, 38, 135, 0.18));
+    }
+
+    .soft-card {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: var(--input-bg);
+      padding: 0.8rem 0.95rem;
+      outline: none;
+      transition: 0.2s ease;
+      color: var(--text-main);
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: rgba(59, 130, 246, 0.7);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+    }
+
+    .nav-btn.active {
+      background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(168,85,247,0.18));
+      border-color: rgba(59,130,246,0.25);
+    }
+
+    .hidden-page {
+      display: none;
+    }
+
+    .progress-bar {
+      transition: width 0.35s ease;
+    }
+
+    .table-wrap::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.45);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <!-- AUTH -->
+  <section id="auth-screen" class="min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-5xl grid lg:grid-cols-2 gap-6">
+      <div class="glass rounded-3xl p-8 lg:p-10 text-white bg-gradient-to-br from-brand-700/70 via-blue-600/50 to-fuchsia-600/50">
+        <div class="inline-flex items-center gap-3 rounded-full bg-white/15 px-4 py-2 text-sm">
+          <span>💼</span>
+          <span>Hishab Pro</span>
+        </div>
+
+        <h1 class="mt-6 text-4xl lg:text-5xl font-bold leading-tight">
+          আয়-ব্যয়ের হিসাব এখন হবে স্মার্ট, সুন্দর, এবং সুরক্ষিত
+        </h1>
+
+        <p class="mt-4 text-white/85 text-lg leading-relaxed">
+          Supabase Auth + Database, সুন্দর Dashboard, Category Chart, Budgeting, Notes, Export — সব এক অ্যাপে।
+        </p>
+
+        <div class="mt-8 grid sm:grid-cols-2 gap-4">
+          <div class="rounded-2xl bg-white/10 p-4 border border-white/15">
+            <div class="text-2xl">📊</div>
+            <h3 class="mt-2 font-semibold">Smart Dashboard</h3>
+            <p class="text-sm text-white/80 mt-1">Summary card, recent activity, category chart</p>
+          </div>
+          <div class="rounded-2xl bg-white/10 p-4 border border-white/15">
+            <div class="text-2xl">🔐</div>
+            <h3 class="mt-2 font-semibold">Secure Login</h3>
+            <p class="text-sm text-white/80 mt-1">Supabase দিয়ে login, signup, session persistence</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-3xl p-6 sm:p-8">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 id="auth-title" class="text-2xl font-bold">লগইন করুন</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">আপনার Hishab Pro অ্যাকাউন্টে প্রবেশ করুন</p>
+          </div>
+          <button id="theme-toggle-auth" class="rounded-xl px-4 py-2 soft-card text-sm font-medium">
+            🌗 মোড
+          </button>
+        </div>
+
+        <div class="mt-6 flex rounded-2xl p-1 soft-card">
+          <button id="login-tab" class="flex-1 rounded-xl px-4 py-3 text-sm font-semibold bg-brand-600 text-white">
+            লগইন
+          </button>
+          <button id="signup-tab" class="flex-1 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            সাইনআপ
+          </button>
+        </div>
+
+        <form id="auth-form" class="mt-6 space-y-4">
+          <div id="name-field" class="hidden">
+            <label class="block mb-2 text-sm font-semibold">নাম</label>
+            <input id="auth-name" type="text" class="form-input" placeholder="আপনার নাম" />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm font-semibold">ইমেইল</label>
+            <input id="auth-email" type="email" class="form-input" placeholder="you@example.com" required />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm font-semibold">পাসওয়ার্ড</label>
+            <input id="auth-password" type="password" class="form-input" placeholder="কমপক্ষে 6 অক্ষর" required />
+          </div>
+
+          <button id="auth-submit-btn" type="submit" class="w-full rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3.5 transition">
+            লগইন করুন
+          </button>
+        </form>
+
+        <div class="mt-5 rounded-2xl bg-blue-50/60 dark:bg-slate-800/60 border border-blue-100 dark:border-slate-700 p-4 text-sm text-slate-700 dark:text-slate-200">
+          <p><strong>নোট:</strong> সাইনআপের পরে email confirmation চালু থাকলে আগে verify করতে হতে পারে।</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="app-screen" class="hidden min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-4 lg:py-6">
+      <div class="grid lg:grid-cols-[280px_1fr] gap-5">
+        <!-- SIDEBAR -->
+        <aside class="glass rounded-3xl p-4 lg:p-5 h-fit lg:sticky lg:top-4">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-brand-500 to-fuchsia-500 flex items-center justify-center text-white text-xl shadow-lg">
+              💼
+            </div>
+            <div>
+              <h1 class="text-xl font-bold">Hishab Pro</h1>
+              <p class="text-xs text-slate-600 dark:text-slate-300">Smart Expense Dashboard</p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl soft-card p-3 mb-5">
+            <p class="text-xs text-slate-500 dark:text-slate-400">লগইন করা আছে</p>
+            <p id="user-email" class="font-semibold break-all"></p>
+          </div>
+
+          <nav class="space-y-2">
+            <button data-page="dashboard-page" class="nav-btn active w-full text-left rounded-2xl px-4 py-3 soft-card border border-transparent">
+              📊 ড্যাশবোর্ড
+            </button>
+            <button data-page="transactions-page" class="nav-btn w-full text-left rounded-2xl px-4 py-3 soft-card border border-transparent">
+              💸 লেনদেন
+            </button>
+            <button data-page="notes-page" class="nav-btn w-full text-left rounded-2xl px-4 py-3 soft-card border border-transparent">
+              📝 নোটস
+            </button>
+            <button data-page="budget-page" class="nav-btn w-full text-left rounded-2xl px-4 py-3 soft-card border border-transparent">
+              🎯 বাজেট
+            </button>
+          </nav>
+
+          <div class="mt-6 space-y-3">
+            <button id="theme-toggle-app" class="w-full rounded-2xl px-4 py-3 soft-card font-medium">
+              🌗 Dark / Light
+            </button>
+            <button id="logout-btn" class="w-full rounded-2xl px-4 py-3 bg-rose-500 hover:bg-rose-600 text-white font-semibold">
+              🚪 লগআউট
+            </button>
+          </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="space-y-5">
+          <div class="glass rounded-3xl p-4 lg:p-5 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between">
+            <div>
+              <h2 class="text-2xl font-bold">স্বাগতম 👋</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300">
+                আপনার হিসাব, বাজেট, নোটস এবং export — সবকিছু এক জায়গায়।
+              </p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 xl:flex gap-3">
+              <input id="filter-start" type="date" class="form-input min-w-[170px]" />
+              <input id="filter-end" type="date" class="form-input min-w-[170px]" />
+              <button id="apply-filter-btn" class="rounded-2xl px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold">
+                ফিল্টার
+              </button>
+              <button id="reset-filter-btn" class="rounded-2xl px-4 py-3 soft-card font-semibold">
+                রিসেট
+              </button>
+            </div>
+          </div>
+
+          <!-- DASHBOARD -->
+          <section id="dashboard-page">
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+              <div class="glass rounded-3xl p-5">
+                <p class="text-sm text-slate-500 dark:text-slate-400">মোট আয়</p>
+                <h3 id="total-income" class="text-3xl font-bold mt-2 text-emerald-600 dark:text-emerald-400">৳ 0.00</h3>
+              </div>
+              <div class="glass rounded-3xl p-5">
+                <p class="text-sm text-slate-500 dark:text-slate-400">মোট ব্যয়</p>
+                <h3 id="total-expense" class="text-3xl font-bold mt-2 text-rose-600 dark:text-rose-400">৳ 0.00</h3>
+              </div>
+              <div class="glass rounded-3xl p-5">
+                <p class="text-sm text-slate-500 dark:text-slate-400">বর্তমান ব্যালেন্স</p>
+                <h3 id="current-balance" class="text-3xl font-bold mt-2 text-brand-600 dark:text-brand-400">৳ 0.00</h3>
+              </div>
+              <div class="glass rounded-3xl p-5">
+                <p class="text-sm text-slate-500 dark:text-slate-400">এই মাসের বাজেট</p>
+                <h3 id="current-budget" class="text-3xl font-bold mt-2 text-amber-600 dark:text-amber-400">৳ 0.00</h3>
+              </div>
+            </div>
+
+            <div class="grid xl:grid-cols-[1.2fr_0.8fr] gap-5 mt-5">
+              <div class="glass rounded-3xl p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 class="text-xl font-bold">সাম্প্রতিক লেনদেন</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">সর্বশেষ 5টি এন্ট্রি</p>
+                  </div>
+                  <button id="goto-transactions" class="rounded-xl px-4 py-2 bg-brand-600 text-white text-sm font-semibold">
+                    সব দেখুন
+                  </button>
+                </div>
+                <div id="recent-transactions" class="space-y-3"></div>
+              </div>
+
+              <div class="glass rounded-3xl p-5">
+                <div class="mb-4">
+                  <h3 class="text-xl font-bold">Category Chart</h3>
+                  <p class="text-sm text-slate-500 dark:text-slate-400">ব্যয়ের বিভাগভিত্তিক বিশ্লেষণ</p>
+                </div>
+                <div class="h-[340px] flex items-center justify-center">
+                  <canvas id="expense-chart"></canvas>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TRANSACTIONS -->
+          <section id="transactions-page" class="hidden-page">
+            <div class="grid xl:grid-cols-[420px_1fr] gap-5">
+              <div class="glass rounded-3xl p-5">
+                <div>
+                  <h3 class="text-xl font-bold">নতুন লেনদেন</h3>
+                  <p class="text-sm text-slate-500 dark:text-slate-400">আয় বা ব্যয় যুক্ত করুন</p>
+                </div>
+
+                <form id="transaction-form" class="mt-5 space-y-4">
+                  <input type="hidden" id="transaction-id" />
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">ধরণ</label>
+                    <select id="type" class="form-select" required>
+                      <option value="expense">ব্যয়</option>
+                      <option value="income">আয়</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">পরিমাণ (৳)</label>
+                    <input id="amount" type="number" min="0" step="0.01" class="form-input" placeholder="যেমন 500" required />
+                  </div>
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">ক্যাটাগরি</label>
+                    <select id="category" class="form-select" required></select>
+                  </div>
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">বিবরণ</label>
+                    <input id="description" type="text" class="form-input" placeholder="যেমন বাজার, বেতন, ওষুধ" required />
+                  </div>
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">তারিখ</label>
+                    <input id="tx-date" type="date" class="form-input" required />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <button id="save-transaction-btn" type="submit" class="rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3">
+                      সেভ করুন
+                    </button>
+                    <button id="reset-transaction-btn" type="button" class="rounded-2xl soft-card font-semibold py-3">
+                      রিসেট
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="glass rounded-3xl p-5">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                  <div>
+                    <h3 class="text-xl font-bold">লেনদেনের তালিকা</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Filter, Edit, Delete, Export</p>
+                  </div>
+
+                  <div class="flex flex-wrap gap-3">
+                    <button id="export-csv-btn" class="rounded-2xl px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                      CSV ডাউনলোড
+                    </button>
+                    <button id="export-pdf-btn" class="rounded-2xl px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold">
+                      PDF ডাউনলোড
+                    </button>
+                  </div>
+                </div>
+
+                <div class="table-wrap overflow-x-auto rounded-2xl border border-white/10">
+                  <table class="min-w-full text-sm">
+                    <thead class="bg-slate-900/5 dark:bg-white/5">
+                      <tr>
+                        <th class="px-4 py-3 text-left">তারিখ</th>
+                        <th class="px-4 py-3 text-left">ধরণ</th>
+                        <th class="px-4 py-3 text-left">ক্যাটাগরি</th>
+                        <th class="px-4 py-3 text-left">বিবরণ</th>
+                        <th class="px-4 py-3 text-left">পরিমাণ</th>
+                        <th class="px-4 py-3 text-left">অ্যাকশন</th>
+                      </tr>
+                    </thead>
+                    <tbody id="transactions-table-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- NOTES -->
+          <section id="notes-page" class="hidden-page">
+            <div class="grid xl:grid-cols-[420px_1fr] gap-5">
+              <div class="glass rounded-3xl p-5">
+                <h3 class="text-xl font-bold">নতুন নোট</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">গুরুত্বপূর্ণ কথা লিখে রাখুন</p>
+
+                <form id="note-form" class="mt-5 space-y-4">
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">নোট</label>
+                    <textarea id="note-content" class="form-textarea min-h-[180px]" placeholder="আজকের গুরুত্বপূর্ণ হিসাব, reminder..." required></textarea>
+                  </div>
+                  <button type="submit" class="w-full rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3">
+                    নোট সংরক্ষণ করুন
+                  </button>
+                </form>
+              </div>
+
+              <div class="glass rounded-3xl p-5">
+                <h3 class="text-xl font-bold">সংরক্ষিত নোটস</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Supabase-এ সংরক্ষিত হবে</p>
+                <div id="notes-list" class="mt-5 space-y-3"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- BUDGET -->
+          <section id="budget-page" class="hidden-page">
+            <div class="grid xl:grid-cols-[420px_1fr] gap-5">
+              <div class="glass rounded-3xl p-5">
+                <h3 class="text-xl font-bold">মাসিক বাজেট সেট করুন</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">প্রতি মাসের আলাদা বাজেট রাখতে পারবেন</p>
+
+                <form id="budget-form" class="mt-5 space-y-4">
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">মাস</label>
+                    <input id="budget-month-input" type="month" class="form-input" required />
+                  </div>
+
+                  <div>
+                    <label class="block mb-2 text-sm font-semibold">বাজেট (৳)</label>
+                    <input id="budget-amount-input" type="number" min="0" step="0.01" class="form-input" placeholder="যেমন 30000" required />
+                  </div>
+
+                  <button type="submit" class="w-full rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3">
+                    বাজেট সেভ করুন
+                  </button>
+                </form>
+              </div>
+
+              <div class="glass rounded-3xl p-5">
+                <h3 class="text-xl font-bold">বাজেট অগ্রগতি</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">নির্বাচিত মাসের ব্যয়ের সাথে তুলনা</p>
+
+                <div class="mt-6 soft-card rounded-3xl p-5">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <div>
+                      <p class="text-sm text-slate-500 dark:text-slate-400">মাস</p>
+                      <h4 id="budget-month-label" class="text-lg font-bold">-</h4>
+                    </div>
+                    <div>
+                      <p class="text-sm text-slate-500 dark:text-slate-400">খরচ / বাজেট</p>
+                      <h4 id="budget-status-text" class="text-lg font-bold">৳ 0.00 / ৳ 0.00</h4>
+                    </div>
+                  </div>
+
+                  <div class="w-full h-4 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <div id="budget-progress" class="progress-bar h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500" style="width:0%"></div>
+                  </div>
+
+                  <div class="mt-3 flex items-center justify-between text-sm">
+                    <span id="budget-progress-label" class="text-slate-600 dark:text-slate-300">0%</span>
+                    <span id="budget-alert-label" class="font-semibold text-slate-700 dark:text-slate-200">Budget safe</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /***********************
+     * SUPABASE CONFIG
+     ***********************/
+    const SUPABASE_URL = "https://hiyevddkpdzmkchnvxcp.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vIbqkM-OQk8NUmFEM382Pw_16zOVZpM";
+    const SUPABASE_LEGACY_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpeWV2ZGRrcGR6bWtjaG52eGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzk4ODUsImV4cCI6MjA4ODgxNTg4NX0.jpG2YI1-EtIA6ky91dcsQvdI2GrT-aj1o3payyqQ_5U";
+    const SUPABASE_KEY = SUPABASE_PUBLISHABLE_KEY || SUPABASE_LEGACY_ANON_KEY;
+
+    /***********************
+     * STATE
+     ***********************/
+    let supabase = null;
+    let currentUser = null;
+    let allTransactions = [];
+    let filteredTransactions = [];
+    let allNotes = [];
+    let expenseChart = null;
+    let authMode = "login";
+
+    const categoryOptions = {
+      expense: [
+        { value: "Food", label: "🍔 Food" },
+        { value: "Rent", label: "🏠 Rent" },
+        { value: "Entertainment", label: "🎬 Entertainment" },
+        { value: "Medical", label: "💊 Medical" },
+        { value: "Transport", label: "🚌 Transport" },
+        { value: "Shopping", label: "🛍️ Shopping" },
+        { value: "Bills", label: "💡 Bills" },
+        { value: "Education", label: "📚 Education" },
+        { value: "Family", label: "👨‍👩‍👧‍👦 Family" },
+        { value: "Other Expense", label: "🧾 Other Expense" }
+      ],
+      income: [
+        { value: "Salary", label: "💼 Salary" },
+        { value: "Business", label: "🏪 Business" },
+        { value: "Freelance", label: "💻 Freelance" },
+        { value: "Bonus", label: "🎁 Bonus" },
+        { value: "Investment", label: "📈 Investment" },
+        { value: "Gift", label: "🎉 Gift" },
+        { value: "Other Income", label: "🧾 Other Income" }
+      ]
+    };
+
+    const els = {
+      authScreen: document.getElementById("auth-screen"),
+      appScreen: document.getElementById("app-screen"),
+
+      authTitle: document.getElementById("auth-title"),
+      authForm: document.getElementById("auth-form"),
+      authEmail: document.getElementById("auth-email"),
+      authPassword: document.getElementById("auth-password"),
+      authName: document.getElementById("auth-name"),
+      authSubmitBtn: document.getElementById("auth-submit-btn"),
+      loginTab: document.getElementById("login-tab"),
+      signupTab: document.getElementById("signup-tab"),
+      nameField: document.getElementById("name-field"),
+
+      themeToggleAuth: document.getElementById("theme-toggle-auth"),
+      themeToggleApp: document.getElementById("theme-toggle-app"),
+      logoutBtn: document.getElementById("logout-btn"),
+      userEmail: document.getElementById("user-email"),
+
+      navButtons: document.querySelectorAll(".nav-btn"),
+      gotoTransactions: document.getElementById("goto-transactions"),
+
+      filterStart: document.getElementById("filter-start"),
+      filterEnd: document.getElementById("filter-end"),
+      applyFilterBtn: document.getElementById("apply-filter-btn"),
+      resetFilterBtn: document.getElementById("reset-filter-btn"),
+
+      dashboardPage: document.getElementById("dashboard-page"),
+      transactionsPage: document.getElementById("transactions-page"),
+      notesPage: document.getElementById("notes-page"),
+      budgetPage: document.getElementById("budget-page"),
+
+      totalIncome: document.getElementById("total-income"),
+      totalExpense: document.getElementById("total-expense"),
+      currentBalance: document.getElementById("current-balance"),
+      currentBudget: document.getElementById("current-budget"),
+      recentTransactions: document.getElementById("recent-transactions"),
+      expenseChartCanvas: document.getElementById("expense-chart"),
+
+      transactionForm: document.getElementById("transaction-form"),
+      transactionId: document.getElementById("transaction-id"),
+      type: document.getElementById("type"),
+      amount: document.getElementById("amount"),
+      category: document.getElementById("category"),
+      description: document.getElementById("description"),
+      txDate: document.getElementById("tx-date"),
+      saveTransactionBtn: document.getElementById("save-transaction-btn"),
+      resetTransactionBtn: document.getElementById("reset-transaction-btn"),
+      transactionsTableBody: document.getElementById("transactions-table-body"),
+
+      noteForm: document.getElementById("note-form"),
+      noteContent: document.getElementById("note-content"),
+      notesList: document.getElementById("notes-list"),
+
+      budgetForm: document.getElementById("budget-form"),
+      budgetMonthInput: document.getElementById("budget-month-input"),
+      budgetAmountInput: document.getElementById("budget-amount-input"),
+      budgetMonthLabel: document.getElementById("budget-month-label"),
+      budgetStatusText: document.getElementById("budget-status-text"),
+      budgetProgress: document.getElementById("budget-progress"),
+      budgetProgressLabel: document.getElementById("budget-progress-label"),
+      budgetAlertLabel: document.getElementById("budget-alert-label"),
+
+      exportCsvBtn: document.getElementById("export-csv-btn"),
+      exportPdfBtn: document.getElementById("export-pdf-btn")
+    };
+
+    /***********************
+     * HELPERS
+     ***********************/
+    function formatCurrency(value) {
+      return `৳ ${Number(value || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+
+    function todayISO() {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function currentMonthYYYYMM() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function escapeHtml(str = "") {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getMonthName(yyyyMM) {
+      if (!yyyyMM) return "-";
+      const [year, month] = yyyyMM.split("-");
+      const date = new Date(Number(year), Number(month) - 1, 1);
+      return date.toLocaleDateString("bn-BD", { year: "numeric", month: "long" });
+    }
+
+    function getCategoryIcon(category) {
+      const all = [...categoryOptions.expense, ...categoryOptions.income];
+      const found = all.find((item) => item.value === category);
+      return found ? found.label.split(" ")[0] : "🧾";
+    }
+
+    function showToast(icon, title) {
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon,
+        title,
+        showConfirmButton: false,
+        timer: 2200,
+        timerProgressBar: true
+      });
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      localStorage.setItem("hishab-theme", theme);
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains("dark");
+      applyTheme(isDark ? "light" : "dark");
+      renderChart();
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem("hishab-theme");
+      if (saved) {
+        applyTheme(saved);
+      } else {
+        applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      }
+    }
+
+    function pagesMap() {
+      return {
+        "dashboard-page": els.dashboardPage,
+        "transactions-page": els.transactionsPage,
+        "notes-page": els.notesPage,
+        "budget-page": els.budgetPage
+      };
+    }
+
+    function setActivePage(pageId) {
+      Object.values(pagesMap()).forEach((page) => page.classList.add("hidden-page"));
+      pagesMap()[pageId].classList.remove("hidden-page");
+
+      els.navButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.page === pageId);
+      });
+    }
+
+    function populateCategoryOptions(type) {
+      const options = categoryOptions[type] || categoryOptions.expense;
+      els.category.innerHTML = options
+        .map((item) => `<option value="${item.value}">${item.label}</option>`)
+        .join("");
+    }
+
+    function resetTransactionForm() {
+      els.transactionId.value = "";
+      els.type.value = "expense";
+      populateCategoryOptions("expense");
+      els.amount.value = "";
+      els.description.value = "";
+      els.txDate.value = todayISO();
+      els.saveTransactionBtn.textContent = "সেভ করুন";
+    }
+
+    function getDateFilteredTransactions() {
+      const start = els.filterStart.value;
+      const end = els.filterEnd.value;
+
+      return allTransactions.filter((tx) => {
+        if (start && tx.tx_date < start) return false;
+        if (end && tx.tx_date > end) return false;
+        return true;
+      });
+    }
+
+    function downloadBlob(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    /***********************
+     * SUPABASE
+     ***********************/
+    function initSupabase() {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      });
+    }
+
+    async function signUpUser(email, password, name) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name || ""
+          }
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    }
+
+    async function loginUser(email, password) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return data;
+    }
+
+    async function logoutUser() {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    }
+
+    /***********************
+     * DATA LAYER
+     ***********************/
+    async function fetchTransactions() {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("tx_date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      allTransactions = data || [];
+      filteredTransactions = getDateFilteredTransactions();
+    }
+
+    async function fetchNotes() {
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      allNotes = data || [];
+    }
+
+    async function fetchCurrentBudget(month) {
+      const { data, error } = await supabase
+        .from("budgets")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .eq("month", month)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data || null;
+    }
+
+    async function createTransaction(payload) {
+      const { error } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: currentUser.id,
+          type: payload.type,
+          amount: payload.amount,
+          category: payload.category,
+          description: payload.description,
+          tx_date: payload.tx_date
+        });
+
+      if (error) throw error;
+    }
+
+    async function updateTransaction(id, payload) {
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          type: payload.type,
+          amount: payload.amount,
+          category: payload.category,
+          description: payload.description,
+          tx_date: payload.tx_date
+        })
+        .eq("id", id)
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+    }
+
+    async function deleteTransaction(id) {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+    }
+
+    async function createNote(content) {
+      const { error } = await supabase
+        .from("notes")
+        .insert({
+          user_id: currentUser.id,
+          content
+        });
+
+      if (error) throw error;
+    }
+
+    async function deleteNote(id) {
+      const { error } = await supabase
+        .from("notes")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+    }
+
+    async function saveBudget(month, amount) {
+      const { error } = await supabase
+        .from("budgets")
+        .upsert(
+          {
+            user_id: currentUser.id,
+            month,
+            amount
+          },
+          { onConflict: "user_id,month" }
+        );
+
+      if (error) throw error;
+    }
+
+    async function loadAllData() {
+      await Promise.all([fetchTransactions(), fetchNotes()]);
+      renderAll();
+    }
+
+    /***********************
+     * RENDER
+     ***********************/
+    async function renderSummary() {
+      const totalIncome = filteredTransactions
+        .filter((tx) => tx.type === "income")
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+      const totalExpense = filteredTransactions
+        .filter((tx) => tx.type === "expense")
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+      const balance = totalIncome - totalExpense;
+      const budgetMonth = els.budgetMonthInput.value || currentMonthYYYYMM();
+      const budget = await fetchCurrentBudget(budgetMonth);
+
+      els.totalIncome.textContent = formatCurrency(totalIncome);
+      els.totalExpense.textContent = formatCurrency(totalExpense);
+      els.currentBalance.textContent = formatCurrency(balance);
+      els.currentBudget.textContent = formatCurrency(budget?.amount || 0);
+
+      if (budget) {
+        els.budgetAmountInput.value = budget.amount;
+      }
+    }
+
+    function renderRecentTransactions() {
+      if (!filteredTransactions.length) {
+        els.recentTransactions.innerHTML = `
+          <div class="rounded-2xl soft-card p-4 text-center text-slate-500 dark:text-slate-300">
+            কোনো লেনদেন পাওয়া যায়নি
+          </div>
+        `;
+        return;
+      }
+
+      els.recentTransactions.innerHTML = filteredTransactions.slice(0, 5).map((tx) => `
+        <div class="soft-card rounded-2xl p-4 flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">${getCategoryIcon(tx.category)}</span>
+              <div>
+                <p class="font-semibold">${escapeHtml(tx.description)}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  ${tx.tx_date} • ${escapeHtml(tx.category)} • ${tx.type === "income" ? "আয়" : "ব্যয়"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="font-bold ${tx.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
+            ${tx.type === "income" ? "+" : "-"} ${formatCurrency(tx.amount)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderTransactionsTable() {
+      if (!filteredTransactions.length) {
+        els.transactionsTableBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-300">
+              কোনো লেনদেন পাওয়া যায়নি
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      els.transactionsTableBody.innerHTML = filteredTransactions.map((tx) => `
+        <tr class="border-t border-white/10">
+          <td class="px-4 py-3 whitespace-nowrap">${tx.tx_date}</td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tx.type === "income" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"}">
+              ${tx.type === "income" ? "আয়" : "ব্যয়"}
+            </span>
+          </td>
+          <td class="px-4 py-3 whitespace-nowrap">${getCategoryIcon(tx.category)} ${escapeHtml(tx.category)}</td>
+          <td class="px-4 py-3 min-w-[220px]">${escapeHtml(tx.description)}</td>
+          <td class="px-4 py-3 whitespace-nowrap font-bold ${tx.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
+            ${formatCurrency(tx.amount)}
+          </td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            <div class="flex gap-2">
+              <button data-id="${tx.id}" class="edit-transaction rounded-xl px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs">
+                Edit
+              </button>
+              <button data-id="${tx.id}" class="delete-transaction rounded-xl px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs">
+                Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll(".edit-transaction").forEach((btn) => {
+        btn.addEventListener("click", () => handleEditTransaction(btn.dataset.id));
+      });
+
+      document.querySelectorAll(".delete-transaction").forEach((btn) => {
+        btn.addEventListener("click", () => handleDeleteTransaction(btn.dataset.id));
+      });
+    }
+
+    function renderNotes() {
+      if (!allNotes.length) {
+        els.notesList.innerHTML = `
+          <div class="rounded-2xl soft-card p-5 text-center text-slate-500 dark:text-slate-300">
+            এখনো কোনো নোট নেই
+          </div>
+        `;
+        return;
+      }
+
+      els.notesList.innerHTML = allNotes.map((note) => `
+        <div class="soft-card rounded-2xl p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p class="whitespace-pre-wrap leading-relaxed">${escapeHtml(note.content)}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                ${new Date(note.created_at).toLocaleString("bn-BD")}
+              </p>
+            </div>
+            <button data-id="${note.id}" class="delete-note rounded-xl px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs">
+              Delete
+            </button>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".delete-note").forEach((btn) => {
+        btn.addEventListener("click", () => handleDeleteNote(btn.dataset.id));
+      });
+    }
+
+    async function renderBudgetProgress() {
+      const selectedMonth = els.budgetMonthInput.value || currentMonthYYYYMM();
+      const budget = await fetchCurrentBudget(selectedMonth);
+      const budgetAmount = Number(budget?.amount || 0);
+
+      const monthExpense = allTransactions
+        .filter((tx) => tx.type === "expense" && tx.tx_date.startsWith(selectedMonth))
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+      const percentage = budgetAmount > 0 ? Math.min((monthExpense / budgetAmount) * 100, 100) : 0;
+
+      els.budgetMonthLabel.textContent = getMonthName(selectedMonth);
+      els.budgetStatusText.textContent = `${formatCurrency(monthExpense)} / ${formatCurrency(budgetAmount)}`;
+      els.budgetProgress.style.width = `${percentage}%`;
+      els.budgetProgressLabel.textContent = `${percentage.toFixed(1)}%`;
+
+      if (budgetAmount === 0) {
+        els.budgetAlertLabel.textContent = "এখনো বাজেট সেট করা হয়নি";
+        els.budgetAlertLabel.className = "font-semibold text-slate-700 dark:text-slate-200";
+      } else if (monthExpense > budgetAmount) {
+        els.budgetAlertLabel.textContent = "Budget limit ছাড়িয়ে গেছে";
+        els.budgetAlertLabel.className = "font-semibold text-rose-600 dark:text-rose-400";
+      } else if (percentage >= 80) {
+        els.budgetAlertLabel.textContent = "সতর্ক থাকুন, বাজেট প্রায় শেষ";
+        els.budgetAlertLabel.className = "font-semibold text-amber-600 dark:text-amber-400";
+      } else {
+        els.budgetAlertLabel.textContent = "Budget safe";
+        els.budgetAlertLabel.className = "font-semibold text-emerald-600 dark:text-emerald-400";
+      }
+    }
+
+    function renderChart() {
+      const expenseByCategory = filteredTransactions
+        .filter((tx) => tx.type === "expense")
+        .reduce((acc, tx) => {
+          acc[tx.category] = (acc[tx.category] || 0) + Number(tx.amount);
+          return acc;
+        }, {});
+
+      const labels = Object.keys(expenseByCategory);
+      const values = Object.values(expenseByCategory);
+
+      const ctx = els.expenseChartCanvas.getContext("2d");
+      if (expenseChart) expenseChart.destroy();
+
+      if (!labels.length) {
+        expenseChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["No Expense Data"],
+            datasets: [{
+              data: [1],
+              backgroundColor: ["rgba(148,163,184,0.55)"],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            plugins: {
+              legend: {
+                labels: {
+                  color: document.documentElement.classList.contains("dark") ? "#e5eefc" : "#334155"
+                }
+              }
+            }
+          }
+        });
+        return;
+      }
+
+      expenseChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              "#3b82f6",
+              "#ef4444",
+              "#10b981",
+              "#f59e0b",
+              "#8b5cf6",
+              "#06b6d4",
+              "#f97316",
+              "#ec4899",
+              "#84cc16",
+              "#6366f1"
+            ],
+            borderWidth: 2,
+            borderColor: document.documentElement.classList.contains("dark") ? "#0f172a" : "#ffffff"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "64%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                color: document.documentElement.classList.contains("dark") ? "#e5eefc" : "#334155",
+                padding: 16
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${formatCurrency(context.parsed || 0)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    async function renderAll() {
+      filteredTransactions = getDateFilteredTransactions();
+      await renderSummary();
+      renderRecentTransactions();
+      renderTransactionsTable();
+      renderNotes();
+      await renderBudgetProgress();
+      renderChart();
+    }
+
+    /***********************
+     * ACTIONS
+     ***********************/
+    function handleEditTransaction(id) {
+      const tx = allTransactions.find((item) => item.id === id);
+      if (!tx) return;
+
+      els.transactionId.value = tx.id;
+      els.type.value = tx.type;
+      populateCategoryOptions(tx.type);
+      els.category.value = tx.category;
+      els.amount.value = tx.amount;
+      els.description.value = tx.description;
+      els.txDate.value = tx.tx_date;
+      els.saveTransactionBtn.textContent = "আপডেট করুন";
+
+      setActivePage("transactions-page");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function handleDeleteTransaction(id) {
+      const result = await Swal.fire({
+        title: "আপনি কি নিশ্চিত?",
+        text: "লেনদেনটি মুছে ফেলা হবে",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "হ্যাঁ, মুছুন",
+        cancelButtonText: "না"
+      });
+
+      if (!result.isConfirmed) return;
+
+      try {
+        await deleteTransaction(id);
+        await fetchTransactions();
+        await renderAll();
+        showToast("success", "লেনদেন মুছে ফেলা হয়েছে");
+      } catch (error) {
+        Swal.fire("সমস্যা", error.message, "error");
+      }
+    }
+
+    async function handleDeleteNote(id) {
+      const result = await Swal.fire({
+        title: "নোট মুছবেন?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "হ্যাঁ",
+        cancelButtonText: "না"
+      });
+
+      if (!result.isConfirmed) return;
+
+      try {
+        await deleteNote(id);
+        await fetchNotes();
+        renderNotes();
+        showToast("success", "নোট মুছে ফেলা হয়েছে");
+      } catch (error) {
+        Swal.fire("সমস্যা", error.message, "error");
+      }
+    }
+
+    function exportCSV() {
+      if (!filteredTransactions.length) {
+        showToast("info", "এক্সপোর্ট করার মতো কোনো ডাটা নেই");
+        return;
+      }
+
+      const headers = ["Date", "Type", "Category", "Description", "Amount"];
+      const rows = filteredTransactions.map((tx) => [
+        tx.tx_date,
+        tx.type,
+        tx.category,
+        `"${String(tx.description).replaceAll('"', '""')}"`,
+        Number(tx.amount).toFixed(2)
+      ]);
+
+      const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+      downloadBlob(`hishab-transactions-${Date.now()}.csv`, csv, "text/csv;charset=utf-8;");
+      showToast("success", "CSV ডাউনলোড শুরু হয়েছে");
+    }
+
+    function exportPDF() {
+      if (!filteredTransactions.length) {
+        showToast("info", "এক্সপোর্ট করার মতো কোনো ডাটা নেই");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text("Hishab Pro - Transactions", 14, 18);
+      doc.setFontSize(11);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+      const rows = filteredTransactions.map((tx) => [
+        tx.tx_date,
+        tx.type,
+        tx.category,
+        tx.description,
+        Number(tx.amount).toFixed(2)
+      ]);
+
+      doc.autoTable({
+        startY: 34,
+        head: [["Date", "Type", "Category", "Description", "Amount"]],
+        body: rows,
+        theme: "grid",
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [45, 145, 255] }
+      });
+
+      doc.save(`hishab-transactions-${Date.now()}.pdf`);
+      showToast("success", "PDF ডাউনলোড শুরু হয়েছে");
+    }
+
+    /***********************
+     * AUTH UI
+     ***********************/
+    function setAuthMode(mode) {
+      authMode = mode;
+      const isLogin = mode === "login";
+
+      els.authTitle.textContent = isLogin ? "লগইন করুন" : "নতুন অ্যাকাউন্ট খুলুন";
+      els.authSubmitBtn.textContent = isLogin ? "লগইন করুন" : "সাইনআপ করুন";
+      els.nameField.classList.toggle("hidden", isLogin);
+
+      els.loginTab.className = isLogin
+        ? "flex-1 rounded-xl px-4 py-3 text-sm font-semibold bg-brand-600 text-white"
+        : "flex-1 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200";
+
+      els.signupTab.className = !isLogin
+        ? "flex-1 rounded-xl px-4 py-3 text-sm font-semibold bg-brand-600 text-white"
+        : "flex-1 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200";
+    }
+
+    /***********************
+     * SESSION
+     ***********************/
+    async function handleSession(session) {
+      currentUser = session?.user || null;
+
+      if (currentUser) {
+        els.authScreen.classList.add("hidden");
+        els.appScreen.classList.remove("hidden");
+        els.userEmail.textContent = currentUser.email || "Logged in";
+
+        els.txDate.value = todayISO();
+        els.budgetMonthInput.value = currentMonthYYYYMM();
+
+        resetTransactionForm();
+        await loadAllData();
+      } else {
+        els.appScreen.classList.add("hidden");
+        els.authScreen.classList.remove("hidden");
+      }
+    }
+
+    /***********************
+     * EVENTS
+     ***********************/
+    function bindEvents() {
+      els.themeToggleAuth.addEventListener("click", toggleTheme);
+      els.themeToggleApp.addEventListener("click", toggleTheme);
+
+      els.loginTab.addEventListener("click", () => setAuthMode("login"));
+      els.signupTab.addEventListener("click", () => setAuthMode("signup"));
+
+      els.authForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = els.authEmail.value.trim();
+        const password = els.authPassword.value.trim();
+        const name = els.authName.value.trim();
+
+        try {
+          if (authMode === "signup") {
+            const result = await signUpUser(email, password, name);
+
+            if (result.session) {
+              showToast("success", "সাইনআপ ও লগইন সফল");
+            } else {
+              await Swal.fire({
+                icon: "success",
+                title: "সাইনআপ সফল",
+                text: "Email confirmation চালু থাকলে আগে verify করুন, তারপর লগইন করুন।"
+              });
+              setAuthMode("login");
+              els.authForm.reset();
+            }
+          } else {
+            await loginUser(email, password);
+            showToast("success", "লগইন সফল");
+          }
+        } catch (error) {
+          Swal.fire("সমস্যা", error.message, "error");
+        }
+      });
+
+      els.logoutBtn.addEventListener("click", async () => {
+        try {
+          await logoutUser();
+          showToast("success", "লগআউট সম্পন্ন হয়েছে");
+        } catch (error) {
+          Swal.fire("সমস্যা", error.message, "error");
+        }
+      });
+
+      els.navButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setActivePage(btn.dataset.page));
+      });
+
+      els.gotoTransactions.addEventListener("click", () => setActivePage("transactions-page"));
+
+      els.type.addEventListener("change", () => populateCategoryOptions(els.type.value));
+
+      els.transactionForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const payload = {
+          type: els.type.value,
+          amount: Number(els.amount.value),
+          category: els.category.value,
+          description: els.description.value.trim(),
+          tx_date: els.txDate.value
+        };
+
+        if (!payload.description) {
+          Swal.fire("সমস্যা", "বিবরণ লিখুন", "warning");
+          return;
+        }
+
+        if (!(payload.amount > 0)) {
+          Swal.fire("সমস্যা", "সঠিক পরিমাণ দিন", "warning");
+          return;
+        }
+
+        try {
+          if (els.transactionId.value) {
+            await updateTransaction(els.transactionId.value, payload);
+            showToast("success", "লেনদেন আপডেট হয়েছে");
+          } else {
+            await createTransaction(payload);
+            showToast("success", payload.type === "income" ? "আয় যোগ হয়েছে" : "ব্যয় যোগ হয়েছে");
+          }
+
+          await fetchTransactions();
+          await renderAll();
+          resetTransactionForm();
+        } catch (error) {
+          Swal.fire("সমস্যা", error.message, "error");
+        }
+      });
+
+      els.resetTransactionBtn.addEventListener("click", resetTransactionForm);
+
+      els.noteForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const content = els.noteContent.value.trim();
+
+        if (!content) {
+          Swal.fire("সমস্যা", "নোট লিখুন", "warning");
+          return;
+        }
+
+        try {
+          await createNote(content);
+          els.noteContent.value = "";
+          await fetchNotes();
+          renderNotes();
+          showToast("success", "নোট সংরক্ষণ করা হয়েছে");
+        } catch (error) {
+          Swal.fire("সমস্যা", error.message, "error");
+        }
+      });
+
+      els.budgetForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const month = els.budgetMonthInput.value;
+        const amount = Number(els.budgetAmountInput.value);
+
+        if (!month || amount < 0) {
+          Swal.fire("সমস্যা", "সঠিক মাস ও বাজেট দিন", "warning");
+          return;
+        }
+
+        try {
+          await saveBudget(month, amount);
+          await renderAll();
+          showToast("success", "বাজেট সেভ হয়েছে");
+        } catch (error) {
+          Swal.fire("সমস্যা", error.message, "error");
+        }
+      });
+
+      els.budgetMonthInput.addEventListener("change", async () => {
+        const budget = await fetchCurrentBudget(els.budgetMonthInput.value);
+        els.budgetAmountInput.value = budget ? budget.amount : "";
+        await renderSummary();
+        await renderBudgetProgress();
+      });
+
+      els.applyFilterBtn.addEventListener("click", async () => {
+        filteredTransactions = getDateFilteredTransactions();
+        await renderAll();
+        showToast("success", "ফিল্টার প্রয়োগ হয়েছে");
+      });
+
+      els.resetFilterBtn.addEventListener("click", async () => {
+        els.filterStart.value = "";
+        els.filterEnd.value = "";
+        filteredTransactions = [...allTransactions];
+        await renderAll();
+        showToast("success", "ফিল্টার রিসেট হয়েছে");
+      });
+
+      els.exportCsvBtn.addEventListener("click", exportCSV);
+      els.exportPdfBtn.addEventListener("click", exportPDF);
+    }
+
+    /***********************
+     * APP START
+     ***********************/
+    async function startApp() {
+      initTheme();
+      initSupabase();
+      bindEvents();
+      setAuthMode("login");
+      populateCategoryOptions("expense");
+      resetTransactionForm();
+
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      await handleSession(session);
+
+      supabase.auth.onAuthStateChange((event, session) => {
+        setTimeout(() => {
+          handleSession(session).catch((error) => {
+            Swal.fire("সমস্যা", error.message, "error");
+          });
+        }, 0);
+      });
+    }
+
+    startApp().catch((error) => {
+      Swal.fire("সমস্যা", error.message, "error");
+    });
+  </script>
+</body>
+</html>
